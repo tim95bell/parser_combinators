@@ -26,8 +26,9 @@ set(warnings
     -Wformat=2
     -Wimplicit-fallthrough)
 
-add_library(parser_combinators STATIC
-    src/pc.cpp)
+add_library("${PROJECT_NAME}" STATIC
+    src/pc.cpp
+    src/parsers.cpp)
 
-target_include_directories(parser_combinators PUBLIC include)
-target_compile_options(parser_combinators PRIVATE ${warnings})
+target_include_directories("${PROJECT_NAME}" PUBLIC include)
+target_compile_options("${PROJECT_NAME}" PRIVATE ${warnings})
