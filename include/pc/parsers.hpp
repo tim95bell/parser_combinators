@@ -39,7 +39,7 @@ namespace pc::parsers {
         return [fn](std::string_view input) -> Result<char> {
             auto iter = std::ranges::find_if(input.rbegin(), input.rend(), fn);
             if (iter != input.rend()) {
-                auto pos = input.size() - (iter - input.rbegin());
+                auto pos = std::distance(iter, input.rend()) - 1;
                 return success(*iter, input.substr(0, pos));
             }
             return failure;
