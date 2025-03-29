@@ -104,7 +104,7 @@ TEST_CASE("trim", "[combinators]") {
     SECTION("trim with input that does NOT need trimming, match") {
         const auto result = trim(tag("hello"))("hello");
         REQUIRE(result.has_value());
-        CHECK(result.value().first == "hello");
+        CHECK(result.value().first == "hello"sv);
         CHECK(result.value().second.empty());
     }
 
@@ -116,7 +116,7 @@ TEST_CASE("trim", "[combinators]") {
     SECTION("trim with input that needs trimming, match") {
         const auto result = trim(tag("hello"))(" \n \t  hello \n\t ");
         REQUIRE(result.has_value());
-        CHECK(result.value().first == "hello");
+        CHECK(result.value().first == "hello"sv);
         CHECK(result.value().second.empty());
     }
 
@@ -133,7 +133,7 @@ TEST_CASE("trim", "[combinators]") {
     SECTION("NO trim with input that needs NOT trimming, match") {
         const auto result = tag(" \n \t  ")(" \n \t  hello \n\t ");
         REQUIRE(result.has_value());
-        CHECK(result.value().first == " \n \t  ");
+        CHECK(result.value().first == " \n \t  "sv);
         CHECK(result.value().second == "hello \n\t "sv);
     }
 }
@@ -151,29 +151,29 @@ TEST_CASE("choice", "[combinators]") {
     SECTION("choice with first match") {
         const auto result = choice(hello, world)("helloworld");
         REQUIRE(result.has_value());
-        CHECK(result.value().first == "hello");
-        CHECK(result.value().second == "world");
+        CHECK(result.value().first == "hello"sv);
+        CHECK(result.value().second == "world"sv);
     }
 
     SECTION("choice with second match") {
         const auto result = choice(hello, world)("worldhello");
         REQUIRE(result.has_value());
-        CHECK(result.value().first == "world");
-        CHECK(result.value().second == "hello");
+        CHECK(result.value().first == "world"sv);
+        CHECK(result.value().second == "hello"sv);
     }
 
     SECTION("choice with both match, should be first") {
         const auto result = choice(hello, hel)("helloworld");
         REQUIRE(result.has_value());
-        CHECK(result.value().first == "hello");
-        CHECK(result.value().second == "world");
+        CHECK(result.value().first == "hello"sv);
+        CHECK(result.value().second == "world"sv);
     }
 
     SECTION("choice with both match (other way around), should be first") {
         const auto result = choice(hel, hello)("helloworld");
         REQUIRE(result.has_value());
-        CHECK(result.value().first == "hel");
-        CHECK(result.value().second == "loworld");
+        CHECK(result.value().first == "hel"sv);
+        CHECK(result.value().second == "loworld"sv);
     }
 }
 
@@ -196,13 +196,13 @@ TEST_CASE("many0_to_many1", "[combinators]") {
         const auto result = many0_to_many1(one)("hello world");
         REQUIRE(result.has_value());
         CHECK(result.value().first == std::vector<int>{1});
-        CHECK(result.value().second == "hello world");
+        CHECK(result.value().second == "hello world"sv);
     }
 
     SECTION("size many output succeeds") {
         const auto result = many0_to_many1(many)("hello world");
         REQUIRE(result.has_value());
         CHECK(result.value().first == std::vector<int>{1, 2, 3});
-        CHECK(result.value().second == "hello world");
+        CHECK(result.value().second == "hello world"sv);
     }
 }
