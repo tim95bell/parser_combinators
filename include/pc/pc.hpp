@@ -10,11 +10,11 @@ namespace pc {
     template <typename T>
     using Result = std::optional<std::pair<T, std::string_view>>;
 
-    template <typename Parser>
-    using ParserResult = std::invoke_result_t<Parser, std::string_view>;
+    template <typename P>
+    using ParserResult = std::invoke_result_t<P, std::string_view>;
 
-    template <typename Parser>
-    using ParserValueType = ParserResult<Parser>::value_type::first_type;
+    template <typename P>
+    using ParserValueType = ParserResult<P>::value_type::first_type;
     // #endregion
 
     // #region concepts
@@ -35,12 +35,16 @@ namespace pc {
     concept WrappedParser = AnyParser<P> &&
         AnyParser<Other> &&
         std::same_as<typename ParserValueType<P>::value_type, ParserValueType<Other>>;
+
+    template <typename C, typename ...Args>
+    concept Combinator = std::invocable<C, Args...>
+        && AnyParser<std::invoke_result_t<C, Args...>>;
     // #endregion
 
     // #region helpers
     template <typename T>
     Result<T> success(T&& value, std::string_view input) {
-        return {{std::forward<T>(value), std::move(input)}};
+        return {{std::forward<T>(value), input}};
     }
 
     static constexpr const auto failure = std::nullopt;

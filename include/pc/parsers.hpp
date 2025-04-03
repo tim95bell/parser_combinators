@@ -7,13 +7,17 @@
 
 namespace pc::parsers {
     auto character(std::string_view input) -> Result<char>;
+    static_assert(AnyParser<decltype(character)>);
     auto newline(std::string_view input) -> Result<char>;
+    static_assert(AnyParser<decltype(newline)>);
     auto line(std::string_view input) -> Result<std::string>;
+    static_assert(AnyParser<decltype(line)>);
 
     template <typename T>
     inline auto fail(std::string_view input) -> Result<T> {
         return failure;
     }
+    static_assert(AnyParser<decltype(fail<char>)>);
 
     inline auto tag(std::string_view prefix) -> Parser<std::string> auto {
         return [prefix](std::string_view input) -> Result<std::string> {
@@ -38,6 +42,7 @@ namespace pc::parsers {
             return success(value, input);
         };
     }
+    static_assert(Combinator<decltype(unit<char>), char>);
 
     auto first_char_match(std::predicate<char> auto fn) -> Parser<char> auto {
         return [fn](std::string_view input) -> Result<char> {

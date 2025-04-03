@@ -8,9 +8,8 @@
 
 namespace pc::combinators {
     template <std::size_t Count>
-    auto manyn(auto parser) -> Parser<std::array<ParserValueType<decltype(parser)>, Count>> auto
-        requires AnyParser<decltype(parser)>
-    {
+    auto manyn(AnyParser auto parser)
+    -> Parser<std::array<ParserValueType<decltype(parser)>, Count>> auto {
         using Element = ParserValueType<decltype(parser)>;
         return [parser](std::string_view input) -> Result<std::array<Element, Count>> {
             std::array<Element, Count> result;
@@ -26,7 +25,7 @@ namespace pc::combinators {
         };
     }
 
-    auto trim(auto parser) -> AnyParser auto {
+    auto trim(AnyParser auto parser) -> SameParser<decltype(parser)> auto {
         return [parser](std::string_view input) -> ParserResult<decltype(parser)> {
             input.remove_prefix(std::min(input.find_first_not_of("\n\t "), input.size()));
             input.remove_suffix(std::min(input.size() - (input.find_last_not_of("\n\t ") + 1), input.size()));
@@ -169,7 +168,7 @@ namespace pc::combinators {
     }
 
     namespace {
-        auto tuple_helper(std::string_view input, auto parser, auto... rest) -> Result<std::tuple<ParserValueType<decltype(parser)>, ParserValueType<decltype(rest)>...>> {
+        auto tuple_helper(std::string_view input, AnyParser auto parser, AnyParser auto... rest) -> Result<std::tuple<ParserValueType<decltype(parser)>, ParserValueType<decltype(rest)>...>> {
             if (auto result = std::invoke(parser, input)) {
                 auto x = std::make_tuple(result->first);
                 if constexpr(sizeof...(rest) == 0) {
@@ -192,7 +191,7 @@ namespace pc::combinators {
         };
     }
 
-    auto map(AnyParser auto parser, auto fn) -> Parser<std::invoke_result_t<decltype(fn), ParserValueType<decltype(parser)>>> auto {
+    auto map(AnyParser auto parser, std::invocable<ParserValueType<decltype(parser)>> auto fn) -> Parser<std::invoke_result_t<decltype(fn), ParserValueType<decltype(parser)>>> auto {
         using Parser = decltype(parser);
         using Fn = decltype(fn);
         using FnReturnType = std::invoke_result_t<Fn, ParserValueType<Parser>>;
