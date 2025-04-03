@@ -3,18 +3,18 @@
 #include <pc/combinators.hpp>
 
 namespace pc::parsers {
-    Result<char> character(std::string_view input) {
+    auto character(std::string_view input) -> Result<char> {
         if (input.empty()) {
             return failure;
         }
         return success(input[0], input.substr(1));
     }
 
-    Result<char> newline(std::string_view input) {
+    auto newline(std::string_view input) -> Result<char> {
         return combinators::filter(character, [](char c) { return c == '\n'; })(input);
     };
 
-    Result<std::string> line(std::string_view input) {
+    auto line(std::string_view input) -> Result<std::string> {
         if (input.empty()) {
             return failure;
         }

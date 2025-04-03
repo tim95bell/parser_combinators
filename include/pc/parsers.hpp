@@ -6,16 +6,16 @@
 #include <string_view>
 
 namespace pc::parsers {
-    Result<char> character(std::string_view input);
-    Result<char> newline(std::string_view input);
-    Result<std::string> line(std::string_view input);
+    auto character(std::string_view input) -> Result<char>;
+    auto newline(std::string_view input) -> Result<char>;
+    auto line(std::string_view input) -> Result<std::string>;
 
     template <typename T>
-    inline Result<T> fail(std::string_view input) {
+    inline auto fail(std::string_view input) -> Result<T> {
         return failure;
     }
 
-    inline auto tag(std::string_view prefix) {
+    inline auto tag(std::string_view prefix) -> Parser<std::string> auto {
         return [prefix](std::string_view input) -> Result<std::string> {
             if (input.starts_with(prefix)) {
                 return success<std::string>(std::string(prefix), input.substr(prefix.size()));
@@ -24,7 +24,7 @@ namespace pc::parsers {
         };
     }
 
-    inline auto tag(char prefix) {
+    inline auto tag(char prefix) -> Parser<char> auto {
         return [prefix](std::string_view input) -> Result<char> {
             if (!input.empty() && input.at(0) == prefix) {
                 return success(prefix, input.substr(1));
@@ -33,13 +33,13 @@ namespace pc::parsers {
         };
     }
 
-    auto unit(auto value) {
+    auto unit(auto value) -> Parser<decltype(value)> auto {
         return [value](std::string_view input) -> Result<decltype(value)> {
             return success(value, input);
         };
     }
 
-    auto first_char_match(std::predicate<char> auto fn) {
+    auto first_char_match(std::predicate<char> auto fn) -> Parser<char> auto {
         return [fn](std::string_view input) -> Result<char> {
             auto iter = std::ranges::find_if(input, fn);
             if (iter != input.end()) {
@@ -49,7 +49,7 @@ namespace pc::parsers {
         };
     }
 
-    auto last_char_match(std::predicate<char> auto fn) {
+    auto last_char_match(std::predicate<char> auto fn) -> Parser<char> auto {
         return [fn](std::string_view input) -> Result<char> {
             auto iter = std::ranges::find_if(input.rbegin(), input.rend(), fn);
             if (iter != input.rend()) {

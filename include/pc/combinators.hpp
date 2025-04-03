@@ -8,7 +8,9 @@
 
 namespace pc::combinators {
     template <std::size_t Count>
-    auto manyn(auto parser) {
+    auto manyn(auto parser) -> Parser<std::array<ParserValueType<decltype(parser)>, Count>> auto
+        requires AnyParser<decltype(parser)>
+    {
         using Element = ParserValueType<decltype(parser)>;
         return [parser](std::string_view input) -> Result<std::array<Element, Count>> {
             std::array<Element, Count> result;
@@ -24,7 +26,7 @@ namespace pc::combinators {
         };
     }
 
-    auto trim(auto parser) {
+    auto trim(auto parser) -> AnyParser auto {
         return [parser](std::string_view input) -> ParserResult<decltype(parser)> {
             input.remove_prefix(std::min(input.find_first_not_of("\n\t "), input.size()));
             input.remove_suffix(std::min(input.size() - (input.find_last_not_of("\n\t ") + 1), input.size()));
@@ -33,27 +35,28 @@ namespace pc::combinators {
     }
 
     namespace {
-        auto choice_helper(std::string_view input, auto parser, auto... parsers) {
-            using ParserValueType = std::common_type_t<ParserValueType<decltype(parser)>, ParserValueType<decltype(parsers)>...>;
-            if (Result<ParserValueType> result = std::invoke(parser, input)) {
+        auto choice_helper(std::string_view input, AnyParser auto parser, AnyParser auto... parsers)
+        -> Result<std::common_type_t<ParserValueType<decltype(parser)>, ParserValueType<decltype(parsers)>...>>
+        {
+            if (auto result = std::invoke(parser, input)) {
                 return result;
             }
 
             if constexpr (sizeof...(parsers) == 0) {
-                return Result<ParserValueType>{};
+                return failure;
             } else {
                 return choice_helper(input, parsers...);
             }
         }
     }
 
-    auto choice(auto... parsers) {
+    auto choice(AnyParser auto... parsers) -> Parser<std::common_type_t<ParserValueType<decltype(parsers)>...>> auto {
         return [parsers...](std::string_view input) {
             return choice_helper(input, parsers...);
         };
     }
 
-    auto many0_to_many1(auto parser) {
+    auto many0_to_many1(AnyParser auto parser) -> SameParser<decltype(parser)> auto {
         return [parser](std::string_view input) -> ParserResult<decltype(parser)> {
             auto result = std::invoke(parser, input);
             if (result && result.value().first.empty()) {
@@ -64,7 +67,7 @@ namespace pc::combinators {
         };
     }
 
-    auto many0(auto parser) {
+    auto many0(AnyParser auto parser) -> Parser<std::vector<ParserValueType<decltype(parser)>>> auto {
         using Parser = decltype(parser);
         return [parser](std::string_view input) -> Result<std::vector<ParserValueType<Parser>>> {
             std::string_view rest = input;
@@ -77,11 +80,11 @@ namespace pc::combinators {
         };
     }
 
-    auto many1(auto parser) {
+    auto many1(AnyParser auto parser) -> Parser<std::vector<ParserValueType<decltype(parser)>>> auto {
         return many0_to_many1(many0(parser));
     }
 
-    auto many_seperated_by0(auto parser, auto seperator) {
+    auto many_seperated_by0(AnyParser auto parser, AnyParser auto seperator) -> Parser<std::vector<ParserValueType<decltype(parser)>>> auto {
         using Parser = decltype(parser);
         return [parser, seperator](std::string_view input) -> Result<std::vector<ParserValueType<Parser>>> {
             std::vector<ParserValueType<Parser>> result;
@@ -103,11 +106,11 @@ namespace pc::combinators {
         };
     }
 
-    auto many_seperated_by1(auto parser, auto seperator) {
+    auto many_seperated_by1(AnyParser auto parser, AnyParser auto seperator) -> Parser<std::vector<ParserValueType<decltype(parser)>>> auto {
         return many0_to_many1(many_seperated_by0(parser, seperator));
     }
 
-    auto many_split_by0(auto parser, std::string_view seperator) {
+    auto many_split_by0(AnyParser auto parser, std::string_view seperator) -> Parser<std::vector<ParserValueType<decltype(parser)>>> auto {
         using Parser = decltype(parser);
         using ValueType = ParserValueType<Parser>;
         return [parser, seperator](std::string_view input) -> Result<std::vector<ValueType>> {
@@ -132,11 +135,12 @@ namespace pc::combinators {
         };
     }
 
-    auto many_split_by1(auto parser, std::string_view seperator) {
+    auto many_split_by1(AnyParser auto parser, std::string_view seperator) -> Parser<std::vector<ParserValueType<decltype(parser)>>> auto {
         return many0_to_many1(many_split_by0(parser, seperator));
     }
 
-    auto pair(auto lhs, auto rhs) {
+    auto pair(AnyParser auto lhs, AnyParser auto rhs)
+    -> Parser<std::pair<ParserValueType<decltype(lhs)>, ParserValueType<decltype(rhs)>>> auto {
         using Lhs = decltype(lhs);
         using Rhs = decltype(rhs);
         return [lhs, rhs](std::string_view input) -> Result<std::pair<ParserValueType<Lhs>, ParserValueType<Rhs>>> {
@@ -149,7 +153,7 @@ namespace pc::combinators {
         };
     }
 
-    auto seperated_pair(auto lhs, auto sep, auto rhs) {
+    auto seperated_pair(AnyParser auto lhs, AnyParser auto sep, AnyParser auto rhs) -> Parser<std::pair<ParserValueType<decltype(lhs)>, ParserValueType<decltype(rhs)>>> auto {
         using Lhs = decltype(lhs);
         using Rhs = decltype(rhs);
         return [lhs, rhs, sep](std::string_view input) -> Result<std::pair<ParserValueType<Lhs>, ParserValueType<Rhs>>> {
@@ -165,38 +169,30 @@ namespace pc::combinators {
     }
 
     namespace {
-        auto tuple_helper(std::string_view input, auto parser, auto... rest) {
-            using Parser = decltype(parser);
+        auto tuple_helper(std::string_view input, auto parser, auto... rest) -> Result<std::tuple<ParserValueType<decltype(parser)>, ParserValueType<decltype(rest)>...>> {
             if (auto result = std::invoke(parser, input)) {
                 auto x = std::make_tuple(result->first);
                 if constexpr(sizeof...(rest) == 0) {
-                    return std::optional{std::pair{x, result->second}};
+                    return success(x, result->second);
                 } else {
                     auto xs = tuple_helper(result->second, rest...);
                     if (xs.has_value()) {
-                        return std::optional{std::pair{std::tuple_cat(x, xs.value().first), xs.value().second}};
+                        return success(std::tuple_cat(x, xs.value().first), xs.value().second);
                     }
                 }
             }
 
-            using X = std::tuple<ParserValueType<Parser>>;
-            if constexpr(sizeof...(rest) == 0) {
-                return std::optional<std::pair<X, std::string_view>>{};
-            } else {
-                using Xs = std::invoke_result_t<decltype(tuple_helper<decltype(rest)...>), std::string_view, decltype(rest)...>::value_type::first_type;
-                using XAndXs = std::invoke_result_t<decltype(std::tuple_cat<X, Xs>), X, Xs>;
-                return std::optional<std::pair<XAndXs, std::string_view>>{};
-            }
+            return failure;
         }
     }
 
-    auto tuple(auto... parsers) {
+    auto tuple(AnyParser auto... parsers) -> Parser<std::tuple<ParserValueType<decltype(parsers)>...>> auto {
         return [parsers...](std::string_view input) {
             return tuple_helper(input, parsers...);
         };
     }
 
-    auto map(auto parser, auto fn) {
+    auto map(AnyParser auto parser, auto fn) -> Parser<std::invoke_result_t<decltype(fn), ParserValueType<decltype(parser)>>> auto {
         using Parser = decltype(parser);
         using Fn = decltype(fn);
         using FnReturnType = std::invoke_result_t<Fn, ParserValueType<Parser>>;
@@ -208,7 +204,7 @@ namespace pc::combinators {
         };
     }
 
-    auto filter(auto parser, auto predicate) {
+    auto filter(AnyParser auto parser, std::predicate<ParserValueType<decltype(parser)>> auto predicate) -> SameParser<decltype(parser)> auto {
         using Parser = decltype(parser);
         return [parser, predicate](std::string_view input) -> ParserResult<Parser> {
             if (auto result = std::invoke(parser, input)) {

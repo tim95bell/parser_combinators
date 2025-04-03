@@ -802,6 +802,13 @@ TEST_CASE("map", "[combinators]") {
         CHECK(result->first == std::string("HELLO"));
         CHECK(result->second == " world"sv);
     }
+
+    SECTION("map from one type to another") {
+        const auto result = pc::map(pc::character, [](char c){ return c - '0'; })("123");
+        REQUIRE(result);
+        CHECK(result->first == 1);
+        CHECK(result->second == "23"sv);
+    }
 }
 
 TEST_CASE("filter", "[combinators]") {
