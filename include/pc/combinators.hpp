@@ -83,7 +83,7 @@ namespace pc::combinators {
 
     auto many_seperated_by0(auto parser, auto seperator) {
         using Parser = decltype(parser);
-        return [parser, seperator](std::string_view input) -> ParserResult<Parser> {
+        return [parser, seperator](std::string_view input) -> Result<std::vector<ParserValueType<Parser>>> {
             std::vector<ParserValueType<Parser>> result;
             std::string_view rest = input;
             if (auto r = std::invoke(parser, rest)) {
@@ -113,11 +113,19 @@ namespace pc::combinators {
         return [parser, seperator](std::string_view input) -> Result<std::vector<ValueType>> {
             std::vector<ValueType> result;
             auto lines = input | std::views::split(seperator);
-            for (auto line : lines) {
-                if (auto r = std::invoke(parser, std::string_view(line.begin(), line.end())); r && r->second.empty()) {
+            if (lines.empty()) {
+                if (auto r = std::invoke(parser, input); r && r->second.empty()) {
                     result.push_back(r->first);
                 } else {
                     return failure;
+                }
+            } else {
+                for (auto line : lines) {
+                    if (auto r = std::invoke(parser, std::string_view(line.begin(), line.end())); r && r->second.empty()) {
+                        result.push_back(r->first);
+                    } else {
+                        return failure;
+                    }
                 }
             }
             return success(result, std::string_view());

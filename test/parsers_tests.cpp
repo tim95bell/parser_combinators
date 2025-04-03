@@ -193,6 +193,49 @@ TEST_CASE("tag", "[parsers]") {
     }
 }
 
+TEST_CASE("tag<char>", "[parsers]") {
+    SECTION("empty input") {
+        const auto result = pc::tag('h')("");
+        REQUIRE(!result.has_value());
+    }
+
+    SECTION("non matching input") {
+        const auto result = pc::tag('w')("hello");
+        REQUIRE(!result.has_value());
+    }
+
+    SECTION("non matching input, matching in middle") {
+        const auto result = pc::tag('e')("hello");
+        REQUIRE(!result.has_value());
+    }
+
+    SECTION("non matching input, matching at end") {
+        const auto result = pc::tag('o')("helohello");
+        REQUIRE(!result.has_value());
+    }
+
+    SECTION("exactly matching input") {
+        const auto result = pc::tag('h')("h");
+        REQUIRE(result.has_value());
+        CHECK(result.value().first == 'h');
+        CHECK(result.value().second.empty());
+    }
+
+    SECTION("matching input, extra after") {
+        const auto result = pc::tag('h')("hello");
+        REQUIRE(result.has_value());
+        CHECK(result.value().first == 'h');
+        CHECK(result.value().second == "ello"sv);
+    }
+
+    SECTION("matching twice input") {
+        const auto result = pc::tag('h')("hh");
+        REQUIRE(result.has_value());
+        CHECK(result.value().first == 'h');
+        CHECK(result.value().second == "h"sv);
+    }
+}
+
 TEST_CASE("unit", "[parsers]") {
     SECTION("unit<int> with empty input") {
         const auto result = pc::unit(20)(""sv);
@@ -318,5 +361,17 @@ TEST_CASE("last_char_match", "[parsers]") {
         REQUIRE(result.has_value());
         CHECK(result.value().first == 'a');
         CHECK(result.value().second == "helloaworldap"sv);
+    }
+}
+
+TEST_CASE("fail", "[parsers]") {
+    SECTION("empty input") {
+        const auto result = pc::fail<int>("");
+        REQUIRE(!result.has_value());
+    }
+
+    SECTION("non empty input") {
+        const auto result = pc::fail<int>("hello world");
+        REQUIRE(!result.has_value());
     }
 }

@@ -10,10 +10,24 @@ namespace pc::parsers {
     Result<char> newline(std::string_view input);
     Result<std::string> line(std::string_view input);
 
+    template <typename T>
+    inline Result<T> fail(std::string_view input) {
+        return failure;
+    }
+
     inline auto tag(std::string_view prefix) {
         return [prefix](std::string_view input) -> Result<std::string> {
             if (input.starts_with(prefix)) {
                 return success<std::string>(std::string(prefix), input.substr(prefix.size()));
+            }
+            return failure;
+        };
+    }
+
+    inline auto tag(char prefix) {
+        return [prefix](std::string_view input) -> Result<char> {
+            if (!input.empty() && input.at(0) == prefix) {
+                return success(prefix, input.substr(1));
             }
             return failure;
         };
